@@ -122,7 +122,21 @@ export default function App() {
   const [videoLink, setVideoLink] = useState('');
 
   useEffect(() => {
+    // Diagnostic check for API keys (common on Vercel/GitHub Pages moves)
+    const checkConfig = () => {
+      // In Vite, defined strings are replaced. If not defined, it might be undefined or empty
+      const key = process.env.GEMINI_API_KEY;
+      if (!key || key === 'undefined' || key === '""') {
+        console.warn('GEMINI_API_KEY is missing. AI analysis will not work.');
+        toast.error('Configuration Warning: GEMINI_API_KEY is missing. Please set it in your deployment environment variables.', {
+          duration: Infinity,
+          id: 'missing-key-warning'
+        });
+      }
+    };
+    
     if (user) {
+      checkConfig();
       const q = query(collection(db, 'sources'), where('userId', '==', user.uid));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const fetchedSources = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -384,7 +398,20 @@ export default function App() {
                 <p className="text-sm text-slate-600 font-medium">MCQ Rationales & Explanations</p>
               </div>
             </div>
-            <Button onClick={signInWithGoogle} className="w-full btn-primary py-6 text-lg rounded-2xl shadow-indigo-100">
+            <Button 
+              onClick={async () => {
+                try {
+                  await signInWithGoogle();
+                } catch (err: any) {
+                  if (err?.code === 'auth/unauthorized-domain') {
+                    toast.error('Domain not authorized in Firebase. Please add your Vercel URL to the Authorized Domains list in Firebase Console.');
+                  } else {
+                    toast.error(`Login failed: ${err.message || 'Unknown error'}`);
+                  }
+                }
+              }} 
+              className="w-full btn-primary py-6 text-lg rounded-2xl shadow-indigo-100"
+            >
               Enter Research Console
             </Button>
           </CardContent>
