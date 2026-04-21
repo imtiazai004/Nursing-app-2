@@ -48,10 +48,19 @@ import JSZip from 'jszip';
 // PDF extraction
 import * as pdfjs from 'pdfjs-dist';
 // @ts-ignore
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const MAX_FIRESTORE_SIZE = 800000; // ~800KB limit to stay safely under 1MB doc limit
+
+const TIMEOUT_MS = 15000; // 15 second timeout for extraction phase
+
+const withTimeout = (promise: Promise<any>, ms: number, message: string) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+  ]);
+};
 
 const extractTextFromPPTX = async (arrayBuffer: ArrayBuffer) => {
   const zip = await JSZip.loadAsync(arrayBuffer);
@@ -159,9 +168,17 @@ export default function App() {
 
       if (file.name.endsWith('.pdf')) {
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        const pdfData = new Uint8Array(arrayBuffer);
+        
+        // Use timeout and legacy-compatible parsing
+        const pdf = await withTimeout(
+          pdfjs.getDocument({ data: pdfData }).promise,
+          TIMEOUT_MS,
+          'PDF loading timed out. The file might be too complex or the engine is unresponsive.'
+        );
+
         let fullText = '';
-        const maxPages = Math.min(pdf.numPages, 30); // Guardrails for memory
+        const maxPages = Math.min(pdf.numPages, 30); 
         
         for (let i = 1; i <= maxPages; i++) {
           const page = await pdf.getPage(i);
