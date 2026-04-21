@@ -152,9 +152,10 @@ export default function App() {
     setQuizResult(null);
     setSummaryResult(null);
     setActiveTab('summary_result');
+    const toastId = 'analysis';
     
     try {
-      toast.loading('Analyzing clinical data...', { id: 'analysis' });
+      toast.loading('AI is analyzing clinical data...', { id: toastId });
       
       const [quiz, summary] = await Promise.all([
         generateQuiz(contentSources, analysisTopic),
@@ -163,10 +164,26 @@ export default function App() {
       
       setQuizResult(quiz);
       setSummaryResult(summary);
-      toast.success('Omni-Analysis Complete', { id: 'analysis' });
-    } catch (error) {
-      console.error(error);
-      toast.error('Analysis failed. Please check your data or try a simpler topic.', { id: 'analysis' });
+      toast.success('Omni-Analysis Complete', { id: toastId });
+    } catch (error: any) {
+      console.error("AI Analysis Error:", error);
+      
+      let errorMessage = 'Analysis failed. Please check your data or try a simpler topic.';
+      
+      // Specifically check for API Key or Auth errors common in external deployments
+      const errorStr = (error?.message || error?.toString() || '').toUpperCase();
+      
+      if (errorStr.includes('API_KEY_INVALID') || errorStr.includes('KEY_NOT_FOUND') || errorStr.includes('NOT DEFINED')) {
+        errorMessage = 'Sensitive Data Access Denied: GEMINI_API_KEY is invalid or missing in Vercel. Please double-check your Environment Variables.';
+      } else if (error?.status === 403 || errorStr.includes('403') || errorStr.includes('PERMISSION_DENIED')) {
+        errorMessage = 'Clinical Research Access Denied: Check your Gemini API quota or ensure the key has access to the flash model.';
+      } else if (errorStr.includes('SAFETY') || errorStr.includes('HARM_CATEGORY')) {
+        errorMessage = 'Material flagged by academic integrity filters. Try a different document.';
+      } else {
+        errorMessage = `Analysis failed: ${error?.message || 'The research engine encountered an unexpected network error.'}`;
+      }
+
+      toast.error(errorMessage, { id: toastId });
     } finally {
       setIsGenerating(false);
     }
