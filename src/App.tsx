@@ -51,6 +51,8 @@ import * as pdfjs from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+const MAX_FIRESTORE_SIZE = 800000; // ~800KB limit to stay safely under 1MB doc limit
+
 const extractTextFromPPTX = async (arrayBuffer: ArrayBuffer) => {
   const zip = await JSZip.loadAsync(arrayBuffer);
   let fullText = '';
@@ -150,7 +152,7 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    const toastId = toast.loading(`Uploading ${file.name}...`);
+    const toastId = toast.loading(`Parsing ${file.name}...`);
     try {
       let content = '';
       let typeLabel = 'text';
@@ -159,11 +161,17 @@ export default function App() {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
         let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
+        const maxPages = Math.min(pdf.numPages, 30); // Guardrails for memory
+        
+        for (let i = 1; i <= maxPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          const pageText = textContent.items.map((item: any) => 'str' in item ? item.str : '').join(' ');
           fullText += pageText + '\n';
+          
+          if (i % 5 === 0) {
+            toast.loading(`Extracting Evidence: ${i}/${pdf.numPages} pages...`, { id: toastId });
+          }
         }
         content = fullText;
         typeLabel = 'pdf';
@@ -181,9 +189,15 @@ export default function App() {
       }
 
       if (!content.trim()) {
-        toast.error('Could not extract any text from this file');
-        return;
+        throw new Error('Could not extract any content from the provided file.');
       }
+
+      // Pre-upload safety check for Firestore limits
+      if (content.length > MAX_FIRESTORE_SIZE) {
+        content = content.substring(0, MAX_FIRESTORE_SIZE) + '... [Auto-truncated]';
+      }
+
+      toast.loading(`Securing in Knowledge Vault...`, { id: toastId });
 
       const newSourceData = {
         userId: user.uid,
@@ -193,106 +207,102 @@ export default function App() {
         createdAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, 'sources'), newSourceData).then(docRef => {
-        setSelectedSourceIds(prev => {
-          const nextIds = [...prev, docRef.id];
-          // TRIGGER INSTANT ANALYSIS with ALL selected sources
-          const currentTopic = topic || file.name.split('.')[0];
-          if (!topic) setTopic(currentTopic);
-          
-          const selectedContent = sources
-            .filter(s => nextIds.includes(s.id))
-            .map(s => `Title: ${s.name}\nType: ${s.type}\nContent: ${s.content}`);
-          
-          // Add the one we just created but isn't in 'sources' state yet
-          selectedContent.push(`Title: ${file.name}\nType: ${typeLabel}\nContent: ${content}`);
-          
-          performAnalysis(selectedContent, currentTopic);
-          return nextIds;
-        });
-      }).catch(err => handleFirestoreError(err, 'create', 'sources'));
+      const docRef = await addDoc(collection(db, 'sources'), newSourceData);
       
-      toast.success('Source uploaded successfully');
+      const currentTopic = topic || file.name.split('.')[0];
+      if (!topic) setTopic(currentTopic);
+      
+      setSelectedSourceIds(prev => [...prev, docRef.id]);
 
-    } catch (error) {
+      const existingSelected = sources.filter(s => selectedSourceIds.includes(s.id));
+      const contextStrings = [
+        ...existingSelected.map(s => `Title: ${s.name}\nType: ${s.type}\nContent: ${s.content}`),
+        `Title: ${file.name}\nType: ${typeLabel}\nContent: ${content}`
+      ];
+
+      toast.success('Source Verified', { id: toastId });
+      performAnalysis(contextStrings, currentTopic);
+
+    } catch (error: any) {
       console.error(error);
-      toast.error('Failed to process source');
-    } finally {
-      toast.dismiss(toastId);
+      if (error?.code === 'permission-denied') {
+        handleFirestoreError(error, 'create', 'sources');
+      } else {
+        toast.error(error.message || 'Processing failed.', { id: toastId });
+      }
     }
   };
 
   const handleAddNote = async () => {
     if (!uploadTitle || !uploadText || !user) return;
+    const toastId = toast.loading('Syncing Clinical Note...');
     try {
       const noteContent = uploadText;
       const noteTitle = uploadTitle;
 
-      await addDoc(collection(db, 'sources'), {
+      const docRef = await addDoc(collection(db, 'sources'), {
         userId: user.uid,
         name: noteTitle,
         type: 'text',
         content: noteContent,
         createdAt: serverTimestamp()
-      }).then(docRef => {
-        setSelectedSourceIds(prev => {
-          const nextIds = [...prev, docRef.id];
-          const currentTopic = topic || noteTitle;
-          if (!topic) setTopic(currentTopic);
-          
-          const selectedContent = sources
-            .filter(s => nextIds.includes(s.id))
-            .map(s => `Title: ${s.name}\nType: ${s.type}\nContent: ${s.content}`);
-          
-          selectedContent.push(`Title: ${noteTitle}\nType: text\nContent: ${noteContent}`);
-          
-          performAnalysis(selectedContent, currentTopic);
-          return nextIds;
-        });
-      }).catch(err => handleFirestoreError(err, 'create', 'sources'));
+      });
+
+      const currentTopic = topic || noteTitle;
+      if (!topic) setTopic(currentTopic);
+      
+      setSelectedSourceIds(prev => [...prev, docRef.id]);
+
+      const existingSelected = sources.filter(s => selectedSourceIds.includes(s.id));
+      const contextStrings = [
+        ...existingSelected.map(s => `Title: ${s.name}\nType: ${s.type}\nContent: ${s.content}`),
+        `Title: ${noteTitle}\nType: text\nContent: ${noteContent}`
+      ];
 
       setUploadTitle('');
       setUploadText('');
-      toast.success('Note added successfully');
+      toast.success('Note Secured', { id: toastId });
+      performAnalysis(contextStrings, currentTopic);
 
     } catch (error) {
-      toast.error('Failed to add note');
+      handleFirestoreError(error, 'create', 'sources');
+      toast.dismiss(toastId);
     }
   };
 
   const handleAddLink = async () => {
     if (!videoLink || !user) return;
+    const toastId = toast.loading('Syncing Evidence Link...');
     try {
       const linkUrl = videoLink;
-      const linkTitle = linkUrl.includes('youtube.com') ? 'YouTube Video' : 'External Link';
+      const linkTitle = linkUrl.includes('youtube.com') || linkUrl.includes('youtu.be') ? 'Clinical Video Data' : 'Evidence Reference';
 
-      await addDoc(collection(db, 'sources'), {
+      const docRef = await addDoc(collection(db, 'sources'), {
         userId: user.uid,
         name: linkTitle,
         type: 'link',
         content: linkUrl,
         createdAt: serverTimestamp()
-      }).then(docRef => {
-        setSelectedSourceIds(prev => {
-          const nextIds = [...prev, docRef.id];
-          const currentTopic = topic || "Clinical Resource from Link";
-          if (!topic) setTopic(currentTopic);
-          
-          const selectedContent = sources
-            .filter(s => nextIds.includes(s.id))
-            .map(s => `Title: ${s.name}\nType: ${s.type}\nContent: ${s.content}`);
-          
-          selectedContent.push(`Title: ${linkTitle}\nType: link\nURL: ${linkUrl}`);
-          
-          performAnalysis(selectedContent, currentTopic);
-          return nextIds;
-        });
-      }).catch(err => handleFirestoreError(err, 'create', 'sources'));
+      });
+
+      const currentTopic = topic || (linkUrl.includes('youtube.com') || linkUrl.includes('youtu.be') ? 'Nursing Video Review' : 'Research Article');
+      if (!topic) setTopic(currentTopic);
+      
+      setSelectedSourceIds(prev => [...prev, docRef.id]);
+
+      const existingSelected = sources.filter(s => selectedSourceIds.includes(s.id));
+      const contextStrings = [
+        ...existingSelected.map(s => `Title: ${s.name}\nType: ${s.type}\nContent: ${s.content}`),
+        `Title: ${linkTitle}\nContent: ${linkUrl}`
+      ];
+
       setVideoLink('');
-      toast.success('Link added successfully');
+      toast.success('Link Attached', { id: toastId });
+      performAnalysis(contextStrings, currentTopic);
 
     } catch (error) {
-      toast.error('Failed to add link');
+      handleFirestoreError(error, 'create', 'sources');
+      toast.dismiss(toastId);
     }
   };
 
