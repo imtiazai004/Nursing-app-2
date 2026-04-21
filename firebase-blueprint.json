@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "Source": {
+      "title": "Source",
+      "description": "An uploaded study material (file, note, or link)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["pdf", "markdown", "link", "text", "docx", "pptx"] },
+        "content": { "type": "string", "description": "The extracted text content or URL" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "type", "content", "createdAt"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "A generated MCQ quiz based on specific sources",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "sourceIds": { "type": "array", "items": { "type": "string" } },
+        "topic": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctAnswer": { "type": "string" },
+              "explanation": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "sourceIds", "questions", "createdAt"]
+    },
+    "Summary": {
+      "title": "Summary",
+      "description": "A generated summary of study material",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "sourceIds": { "type": "array", "items": { "type": "string" } },
+        "topic": { "type": "string" },
+        "content": { "type": "string" },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "sourceIds", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "sources/{sourceId}": {
+      "schema": "Source",
+      "description": "Uploaded study materials"
+    },
+    "quizzes/{quizId}": {
+      "schema": "Quiz",
+      "description": "Generated quizzes"
+    },
+    "summaries/{summaryId}": {
+      "schema": "Summary",
+      "description": "Generated summaries"
+    }
+  }
+}

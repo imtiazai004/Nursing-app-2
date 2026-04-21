@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Auth helpers
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Source Validation
+    function isValidSource(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 256 &&
+             data.type in ['pdf', 'markdown', 'link', 'text', 'docx', 'pptx'] &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 2097152 && // 2MB limit for clinical text
+             data.createdAt == request.time;
+    }
+
+    match /sources/{sourceId} {
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(sourceId) && isValidSource(request.resource.data);
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // Quiz Validation
+    function isValidQuiz(data) {
+      return data.userId == request.auth.uid &&
+             data.sourceIds is list && data.sourceIds.size() > 0 &&
+             data.questions is list && data.questions.size() > 0 && data.questions.size() <= 20 &&
+             data.createdAt == request.time;
+    }
+
+    match /quizzes/{quizId} {
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(quizId) && isValidQuiz(request.resource.data);
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // Summary Validation
+    function isValidSummary(data) {
+      return data.userId == request.auth.uid &&
+             data.sourceIds is list && data.sourceIds.size() > 0 &&
+             data.content is string && data.content.size() > 0 &&
+             data.createdAt == request.time;
+    }
+
+    match /summaries/{summaryId} {
+      allow get: if isSignedIn() && isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(summaryId) && isValidSummary(request.resource.data);
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+  }
+}
