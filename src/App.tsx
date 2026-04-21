@@ -120,6 +120,7 @@ export default function App() {
   const [uploadText, setUploadText] = useState('');
   const [uploadTitle, setUploadTitle] = useState('');
   const [videoLink, setVideoLink] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     // Diagnostic check for API keys (common on Vercel/GitHub Pages moves)
@@ -377,6 +378,7 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <Toaster position="top-center" richColors />
         <Card className="w-full max-w-md geometric-card border-none shadow-xl">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-indigo-900 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-200">
@@ -398,22 +400,37 @@ export default function App() {
                 <p className="text-sm text-slate-600 font-medium">MCQ Rationales & Explanations</p>
               </div>
             </div>
-            <Button 
-              onClick={async () => {
-                try {
-                  await signInWithGoogle();
-                } catch (err: any) {
-                  if (err?.code === 'auth/unauthorized-domain') {
-                    toast.error('Domain not authorized in Firebase. Please add your Vercel URL to the Authorized Domains list in Firebase Console.');
-                  } else {
-                    toast.error(`Login failed: ${err.message || 'Unknown error'}`);
+            <div className="space-y-3">
+              <Button 
+                disabled={isLoggingIn}
+                onClick={async () => {
+                  setIsLoggingIn(true);
+                  try {
+                    await signInWithGoogle();
+                  } catch (err: any) {
+                    setIsLoggingIn(false);
+                    if (err?.code === 'auth/unauthorized-domain') {
+                      toast.error('Domain not authorized in Firebase. Please add your Vercel URL to the Authorized Domains list in Firebase Console.');
+                    } else if (err?.code === 'auth/popup-blocked') {
+                      toast.info('Popup blocked. Trying redirect method...');
+                      // Fallback to redirect if popup is blocked
+                      const { getAuth, GoogleAuthProvider, signInWithRedirect } = await import('firebase/auth');
+                      const auth = getAuth();
+                      const provider = new GoogleAuthProvider();
+                      await signInWithRedirect(auth, provider);
+                    } else {
+                      toast.error(`Login failed: ${err.message || 'Unknown error'}`);
+                    }
                   }
-                }
-              }} 
-              className="w-full btn-primary py-6 text-lg rounded-2xl shadow-indigo-100"
-            >
-              Enter Research Console
-            </Button>
+                }} 
+                className="w-full btn-primary py-6 text-lg rounded-2xl shadow-indigo-100 font-bold"
+              >
+                {isLoggingIn ? 'Connecting to Vault...' : 'Enter Research Console'}
+              </Button>
+              <p className="text-[10px] text-center text-slate-400">
+                Uses Secure Google Research Authentication
+              </p>
+            </div>
           </CardContent>
           <CardFooter className="justify-center">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Academic Excellence Enabled</p>
