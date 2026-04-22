@@ -110,7 +110,15 @@ export default function App() {
   const [user, loading] = useAuthState(auth);
   const [sources, setSources] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('sources');
+  const [isMobile, setIsMobile] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const [quizResult, setQuizResult] = useState<MCQQuestion[] | null>(null);
   const [summaryResult, setSummaryResult] = useState<SummaryResult | null>(null);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
@@ -458,57 +466,63 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-800">
+    <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-slate-50 font-sans text-slate-800">
       <Toaster position="top-center" richColors />
       
-      {/* 1. Left Navigation Rail */}
-      <nav className="w-20 bg-indigo-900 flex flex-col items-center py-8 space-y-8 flex-shrink-0">
-        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
+      {/* 1. Navigation - Left Rail on Desktop, Bottom Rail on Mobile */}
+      <nav className="w-full lg:w-20 bg-indigo-900 flex flex-row lg:flex-col items-center justify-between lg:justify-start px-6 lg:px-0 py-4 lg:py-8 space-x-6 lg:space-x-0 lg:space-y-8 flex-shrink-0 z-50 order-2 lg:order-none">
+        <div className="hidden lg:flex w-12 h-12 bg-white rounded-xl items-center justify-center shadow-md">
           <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
             <GraduationCap className="text-white w-4 h-4" />
           </div>
         </div>
-        <div className="space-y-6 flex flex-col items-center">
+        
+        <div className="flex flex-row lg:flex-col items-center gap-6 lg:gap-8 flex-1 lg:flex-none justify-center">
           <div 
-            className={`w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${activeTab === 'sources' ? 'bg-indigo-600' : 'bg-indigo-800 hover:bg-indigo-700'}`}
+            className={`p-2 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${activeTab === 'sources' ? 'bg-indigo-600' : 'bg-indigo-800 hover:bg-indigo-700'}`}
             onClick={() => setActiveTab('sources')}
             title="Source Library"
           >
             <History className="w-5 h-5 text-indigo-100" />
+            <span className="lg:hidden text-[10px] text-white ml-2">Workbench</span>
           </div>
           <div 
-            className={`w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${activeTab === 'summary_result' ? 'bg-indigo-600' : 'bg-indigo-800 hover:bg-indigo-700'}`}
+            className={`p-2 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${activeTab === 'summary_result' ? 'bg-indigo-600' : 'bg-indigo-800 hover:bg-indigo-700'}`}
             onClick={() => setActiveTab('summary_result')}
             title="Summary Hub"
           >
             <FileText className="w-5 h-5 text-indigo-100" />
+            <span className="lg:hidden text-[10px] text-white ml-2">Summary</span>
           </div>
           <div 
-            className={`w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${activeTab === 'quiz_result' ? 'bg-indigo-600' : 'bg-indigo-800 hover:bg-indigo-700'}`}
+            className={`p-2 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${activeTab === 'quiz_result' ? 'bg-indigo-600' : 'bg-indigo-800 hover:bg-indigo-700'}`}
             onClick={() => setActiveTab('quiz_result')}
             title="MCQ Sandbox"
           >
             <BrainCircuit className="w-5 h-5 text-indigo-100" />
-          </div>
-          <div 
-            className={`w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${activeTab === 'related_sources' ? 'bg-indigo-600' : 'bg-indigo-800 hover:bg-indigo-700'}`}
-            onClick={() => setActiveTab('related_sources')}
-            title="Evidence Links"
-          >
-            <ExternalLink className="w-5 h-5 text-indigo-100" />
+            <span className="lg:hidden text-[10px] text-white ml-2">MCQs</span>
           </div>
         </div>
-        <div className="mt-auto">
+
+        <div className="lg:mt-auto">
           <Button variant="ghost" size="icon" onClick={logout} className="text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-lg">
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
       </nav>
 
-      {/* 2. Source Library Pane */}
-      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
-        <div className="p-6 flex-1 flex flex-col overflow-hidden">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Source Library</h2>
+      {/* 2. Source Library Pane - Collapsible on Mobile */}
+      <aside className={`
+        fixed inset-0 z-40 bg-white lg:relative lg:block lg:w-72 lg:inset-auto border-r border-slate-200 lg:flex-shrink-0 transition-transform duration-300 transform
+        ${activeTab === 'sources' ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="p-4 lg:p-6 h-full flex flex-col overflow-hidden pb-20 lg:pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Source Library</h2>
+            <button onClick={() => setActiveTab('summary_result')} className="lg:hidden p-1 text-slate-400">
+               <ChevronRight className="w-5 h-5 rotate-180" />
+            </button>
+          </div>
           
           <div className="mb-6 space-y-2">
             <label className="w-full py-3 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-xl text-indigo-600 font-semibold text-sm hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 cursor-pointer">
@@ -625,7 +639,7 @@ export default function App() {
       {/* 3. Main Interaction Area */}
       <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between flex-shrink-0">
+        <header className="h-20 bg-white border-b border-slate-200 px-4 lg:px-8 flex items-center justify-between flex-shrink-0">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-slate-900 truncate">
@@ -650,21 +664,21 @@ export default function App() {
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto bg-slate-50">
-          <div className="p-8 max-w-6xl mx-auto w-full">
+        <div className="flex-1 overflow-y-auto bg-slate-50 relative pb-20 lg:pb-0">
+          <div className="p-4 lg:p-8 max-w-6xl mx-auto w-full">
             <AnimatePresence mode="wait">
-              {activeTab === 'sources' && (
+              {(activeTab === 'sources' || !isMobile) && activeTab === 'sources' && (
                 <motion.div 
                   key="workbench"
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 1.02 }}
-                  className="grid grid-cols-12 gap-8"
+                  className="grid grid-cols-12 gap-4 lg:gap-8"
                 >
                   {/* Generator Console */}
-                  <div className="col-span-12 lg:col-span-8 space-y-6">
-                    <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-                      <div className="flex justify-between items-center mb-8">
+                  <div className="col-span-12 lg:col-span-8 space-y-4 lg:space-y-6">
+                    <div className="bg-white rounded-2xl lg:rounded-3xl border border-slate-200 p-6 lg:p-8 shadow-sm">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                         <h3 className="font-bold text-lg flex items-center text-slate-900">
                           <span className="w-2 h-6 bg-indigo-500 rounded-full mr-3 shadow-lg shadow-indigo-100"></span>
                           Define Study Scope
@@ -674,12 +688,12 @@ export default function App() {
                         </span>
                       </div>
                       
-                      <div className="space-y-8">
+                      <div className="space-y-6 lg:space-y-8">
                         <div className="relative">
-                          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-indigo-300" />
+                          <Search className="absolute left-4 lg:left-5 top-1/2 -translate-y-1/2 w-5 h-5 lg:w-6 lg:h-6 text-indigo-300" />
                           <Input 
-                            className="h-20 pl-14 text-xl font-semibold rounded-2xl bg-slate-50 border-slate-100 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all shadow-inner border-none"
-                            placeholder="Primary Topic for Analysis (e.g. Fluids & Electrolytes)"
+                            className="h-16 lg:h-20 pl-12 lg:pl-14 text-lg lg:text-xl font-semibold rounded-xl lg:rounded-2xl bg-slate-50 border-slate-100 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all shadow-inner border-none"
+                            placeholder="Primary Topic (e.g. Fluids)"
                             value={topic}
                             onChange={(e) => setTopic(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && runSmartAnalysis()}
@@ -687,35 +701,35 @@ export default function App() {
                         </div>
 
                         <div className="flex flex-col gap-4">
-                          <div className="p-10 border-2 border-dashed border-indigo-100 rounded-[40px] flex flex-col items-center text-center">
-                            <div className={`p-5 rounded-3xl mb-4 ${isGenerating ? 'bg-indigo-100' : 'bg-slate-50'}`}>
-                              <BrainCircuit className={`w-12 h-12 ${isGenerating ? 'text-indigo-600 animate-pulse' : 'text-slate-300'}`} />
+                          <div className="p-6 lg:p-10 border-2 border-dashed border-indigo-100 rounded-[32px] lg:rounded-[40px] flex flex-col items-center text-center">
+                            <div className={`p-4 lg:p-5 rounded-2xl lg:rounded-3xl mb-4 ${isGenerating ? 'bg-indigo-100' : 'bg-slate-50'}`}>
+                              <BrainCircuit className={`w-10 h-10 lg:w-12 lg:h-12 ${isGenerating ? 'text-indigo-600 animate-pulse' : 'text-slate-300'}`} />
                             </div>
-                            <h4 className="text-xl font-bold text-slate-800">
+                            <h4 className="text-lg lg:text-xl font-bold text-slate-800">
                               {isGenerating ? 'Synthesizing Evidence...' : 'Direct-to-Dashboard Sync'}
                             </h4>
-                            <p className="text-sm text-slate-500 max-w-xs mt-2 font-medium">
-                              Analysis triggers automatically when you upload sources or update your topic. Results flow directly into your hubs.
+                            <p className="text-xs lg:text-sm text-slate-500 max-w-xs mt-2 font-medium">
+                              Analysis triggers automatically when you upload sources.
                             </p>
                           </div>
 
                           <Button 
                             onClick={runSmartAnalysis} 
                             disabled={isGenerating || selectedSourceIds.length === 0 || !topic}
-                            className="h-14 rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-none font-bold shadow-none"
+                            className="h-14 rounded-xl lg:rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-none font-bold shadow-none"
                           >
                             <Sparkles className="w-4 h-4 mr-2" />
                             Recalculate Full Analysis
                           </Button>
                           
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="p-4 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-100 flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                               </div>
                               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dashboards Ready</p>
                             </div>
-                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                            <div className="p-4 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-100 flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
                                 <FileText className="w-4 h-4 text-indigo-600" />
                               </div>
@@ -758,8 +772,8 @@ export default function App() {
                   </div>
 
                   {/* Right: Quick Stats */}
-                  <div className="col-span-12 lg:col-span-4 space-y-6">
-                    <div className="bg-white rounded-3xl border border-slate-200 p-8 flex flex-col items-center text-center shadow-sm">
+                  <div className="col-span-12 lg:col-span-4 space-y-4 lg:space-y-6">
+                    <div className="bg-white rounded-2xl lg:rounded-3xl border border-slate-200 p-6 lg:p-8 flex flex-col items-center text-center shadow-sm">
                       <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
                         <CheckCircle2 className="w-8 h-8" />
                       </div>
@@ -791,33 +805,33 @@ export default function App() {
                 <motion.div 
                   key="summary" 
                   initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                  className="space-y-8"
+                  className="space-y-6 lg:space-y-8"
                 >
                   {!summaryResult ? (
-                    <div className="bg-white rounded-[32px] border border-slate-200 p-20 text-center shadow-sm">
-                      <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <FileText className="w-10 h-10" />
+                    <div className="bg-white rounded-[24px] lg:rounded-[32px] border border-slate-200 p-8 lg:p-20 text-center shadow-sm">
+                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <FileText className="w-8 h-8 lg:w-10 lg:h-10" />
                       </div>
-                      <h3 className="text-2xl font-bold text-slate-900 mb-2">No Summary Generated</h3>
-                      <p className="text-slate-500 max-w-sm mx-auto mb-8 font-medium">Please select your sources in the vault and run the "Smart Analysis" tool to generate an evidence-based summary.</p>
-                      <Button onClick={() => setActiveTab('sources')} variant="outline" className="rounded-xl px-8 border-slate-200">Return to Workbench</Button>
+                      <h3 className="text-xl lg:text-2xl font-bold text-slate-900 mb-2">No Summary Generated</h3>
+                      <p className="text-sm lg:text-slate-500 max-w-sm mx-auto mb-8 font-medium italic opacity-70 lg:opacity-100">Please select your sources in the vault and run analysis to generate a synthesis.</p>
+                      <Button onClick={() => setActiveTab('sources')} variant="outline" className="rounded-xl px-6 lg:px-8 border-slate-200">Return to Workbench</Button>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-[32px] border border-slate-200 p-10 shadow-sm relative overflow-hidden">
+                    <div className="bg-white rounded-2xl lg:rounded-[32px] border border-slate-200 p-6 lg:p-10 shadow-sm relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl -z-0" />
                       
                       <div className="relative z-10">
-                        <div className="flex items-center gap-4 mb-10 pb-6 border-b border-slate-100">
-                          <div className="p-3 bg-indigo-900 rounded-2xl text-white">
-                            <FileText className="w-6 h-6" />
+                        <div className="flex items-center gap-3 lg:gap-4 mb-8 lg:mb-10 lg:pb-6 lg:border-b lg:border-slate-100">
+                          <div className="p-3 bg-indigo-900 rounded-xl lg:rounded-2xl text-white">
+                            <FileText className="w-5 h-5 lg:w-6 lg:h-6" />
                           </div>
                           <div>
-                            <h3 className="text-3xl font-bold text-slate-900">Summary Hub</h3>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Foundational Evidence Synthesis</p>
+                            <h3 className="text-xl lg:text-3xl font-bold text-slate-900">Summary Hub</h3>
+                            <p className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Foundational Evidence Synthesis</p>
                           </div>
                         </div>
                         
-                        <div className="prose prose-indigo max-w-none prose-headings:font-bold prose-p:font-medium prose-p:text-slate-600 prose-li:font-medium prose-p:leading-relaxed">
+                        <div className="prose prose-sm lg:prose-indigo max-w-none prose-headings:font-bold prose-p:font-medium prose-p:text-slate-600 prose-li:font-medium prose-p:leading-relaxed">
                           <Markdown>{summaryResult.content}</Markdown>
                         </div>
                       </div>
@@ -830,55 +844,55 @@ export default function App() {
                 <motion.div 
                   key="quiz" 
                   initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                  className="space-y-8"
+                  className="space-y-6 lg:space-y-8"
                 >
                   {!quizResult ? (
-                    <div className="bg-white rounded-[32px] border border-slate-200 p-20 text-center shadow-sm">
-                      <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <BrainCircuit className="w-10 h-10" />
+                    <div className="bg-white rounded-[24px] lg:rounded-[32px] border border-slate-200 p-8 lg:p-20 text-center shadow-sm">
+                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <BrainCircuit className="w-8 h-8 lg:w-10 lg:h-10" />
                       </div>
-                      <h3 className="text-2xl font-bold text-slate-900 mb-2">Quiz Board Empty</h3>
-                      <p className="text-slate-500 max-w-sm mx-auto mb-8 font-medium">Select sources in the vault and run the analysis to generate custom MCQ case studies.</p>
-                      <Button onClick={() => setActiveTab('sources')} variant="outline" className="rounded-xl px-8 border-slate-200">Go to Vault</Button>
+                      <h3 className="text-xl lg:text-2xl font-bold text-slate-900 mb-2">Quiz Board Empty</h3>
+                      <p className="text-sm lg:text-slate-500 max-w-sm mx-auto mb-8 font-medium">Select sources and run the analysis to generate custom MCQ case studies.</p>
+                      <Button onClick={() => setActiveTab('sources')} variant="outline" className="rounded-xl px-6 lg:px-8 border-slate-200">Go to Vault</Button>
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center justify-between gap-4 py-4 border-b border-slate-200">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-100">
-                            <BrainCircuit className="w-6 h-6" />
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 border-b border-slate-200">
+                        <div className="flex items-center gap-3 lg:gap-4">
+                          <div className="p-3 bg-indigo-600 rounded-xl lg:rounded-2xl text-white shadow-lg shadow-indigo-100">
+                            <BrainCircuit className="w-5 h-5 lg:w-6 lg:h-6" />
                           </div>
                           <div>
-                            <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{topic} Sandbox</h3>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">MCQs Generated from {selectedSourceIds.length} Library Sources</p>
+                            <h3 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">{topic} Sandbox</h3>
+                            <p className="text-[9px] lg:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">MCQs from {selectedSourceIds.length} Sources</p>
                           </div>
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 gap-6">
+                      <div className="grid grid-cols-1 gap-4 lg:gap-6">
                         {quizResult.map((q, idx) => (
-                          <div key={idx} className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                            <div className="p-8 border-b border-slate-50">
-                              <Badge className="mb-4 bg-indigo-50 text-indigo-700 border-indigo-100 rounded-md font-bold uppercase tracking-widest text-[10px]">Case Question {idx + 1}</Badge>
-                              <p className="text-lg font-bold text-slate-800 leading-snug">{q.question}</p>
+                          <div key={idx} className="bg-white rounded-2xl lg:rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                            <div className="p-6 lg:p-8 border-b border-slate-50">
+                              <Badge className="mb-4 bg-indigo-50 text-indigo-700 border-indigo-100 rounded-md font-bold uppercase tracking-widest text-[9px]">Case {idx + 1}</Badge>
+                              <p className="text-base lg:text-lg font-bold text-slate-800 leading-snug">{q.question}</p>
                             </div>
-                            <div className="p-8 bg-slate-50/30">
+                            <div className="p-6 lg:p-8 bg-slate-50/30">
                               <div className="grid grid-cols-1 gap-3">
                                 {q.options.map((opt, oIdx) => (
-                                  <div key={oIdx} className={`p-5 rounded-2xl border bg-white flex items-center justify-between text-sm font-semibold transition-all ${opt === q.correctAnswer ? 'border-emerald-200 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-100' : 'border-slate-100 hover:border-slate-300'}`}>
+                                  <div key={oIdx} className={`p-4 lg:p-5 rounded-xl lg:rounded-2xl border bg-white flex items-center justify-between text-xs lg:text-sm font-semibold transition-all ${opt === q.correctAnswer ? 'border-emerald-200 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-100' : 'border-slate-100 hover:border-slate-300'}`}>
                                     <span className={opt === q.correctAnswer ? 'text-emerald-900' : 'text-slate-700'}>{opt}</span>
-                                    {opt === q.correctAnswer && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+                                    {opt === q.correctAnswer && <CheckCircle2 className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-500" />}
                                   </div>
                                 ))}
                               </div>
                               
-                              <Accordion className="mt-6">
+                              <Accordion className="mt-4 lg:mt-6">
                                 <AccordionItem value="rationale" className="border-none">
-                                  <AccordionTrigger className="text-xs font-bold text-indigo-600 hover:no-underline bg-white p-4 rounded-xl border border-indigo-100 shadow-sm uppercase tracking-widest">
-                                    View Clinical Rationale
+                                  <AccordionTrigger className="text-[10px] lg:text-xs font-bold text-indigo-600 hover:no-underline bg-white p-3 lg:p-4 rounded-lg lg:rounded-xl border border-indigo-100 shadow-sm uppercase tracking-widest">
+                                    View Rationale
                                   </AccordionTrigger>
-                                  <AccordionContent className="p-6 bg-white border border-slate-200 rounded-xl mt-3 text-sm text-slate-600 leading-relaxed shadow-inner">
-                                    <div className="flex gap-4">
+                                  <AccordionContent className="p-4 lg:p-6 bg-white border border-slate-200 rounded-xl mt-3 text-xs lg:text-sm text-slate-600 leading-relaxed shadow-inner">
+                                    <div className="flex gap-3 lg:gap-4">
                                       <div className="w-1 h-auto bg-indigo-500 rounded-full flex-shrink-0" />
                                       <p className="font-medium italic">{q.explanation}</p>
                                     </div>
