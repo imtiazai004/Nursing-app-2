@@ -22,17 +22,19 @@ export interface SummaryResult {
 export const generateQuiz = async (sources: string[], topic: string): Promise<MCQQuestion[]> => {
   const context = sources.join("\n\n---\n\n");
   const prompt = `
-    You are an expert nursing educator. Based ONLY on the following study materials, generate a quiz of 5 multiple-choice questions about "${topic}".
+    You are an expert nursing educator. Based ONLY on the following study materials, generate an exhaustive quiz of 30-40 high-quality multiple-choice questions about "${topic}".
     
     Materials:
     ${context}
     
     Requirements:
-    1. Questions must be strictly based on the provided material.
-    2. Each question must have 4 options.
-    3. Correct answer must be one of the options.
-    4. Provide a clear explanation for the correct answer based on the source.
-    5. Ensure high medical accuracy according to the sources provided.
+    1. Scan the ENTIRE document and extract every significant clinical concept.
+    2. Do NOT repeat questions; ensure each question covers a distinct part of the material.
+    3. Generate as many questions as possible (up to 40) while maintaining high quality.
+    4. Each question must have 4 options.
+    5. Correct answer must be one of the options.
+    6. Provide a detailed clinical rationale for the correct answer based on the source.
+    7. Ensure high medical accuracy according to the sources provided.
   `;
 
   const response = await ai.models.generateContent({

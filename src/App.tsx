@@ -213,12 +213,12 @@ export default function App() {
         // Use timeout and legacy-compatible parsing
         const pdf = await withTimeout(
           pdfjs.getDocument({ data: pdfData }).promise,
-          TIMEOUT_MS,
+          TIMEOUT_MS * 2,
           'PDF loading timed out. The file might be too complex or the engine is unresponsive.'
         );
 
         let fullText = '';
-        const maxPages = Math.min(pdf.numPages, 30); 
+        const maxPages = Math.min(pdf.numPages, 100); 
         
         for (let i = 1; i <= maxPages; i++) {
           const page = await pdf.getPage(i);
