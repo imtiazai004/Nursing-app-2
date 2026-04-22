@@ -22,10 +22,14 @@ import {
   Search,
   ChevronRight,
   ExternalLink,
-  History
+  History,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'sonner';
+
+// Custom Libs
+import { exportSummaryToPDF, exportQuizToPDF } from './lib/pdfGenerator';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -469,6 +473,15 @@ export default function App() {
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-slate-50 font-sans text-slate-800">
       <Toaster position="top-center" richColors />
       
+      {user && !user.emailVerified && (
+        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md bg-amber-50 border border-amber-200 p-3 rounded-xl shadow-lg flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <p className="text-[10px] font-bold text-amber-800 leading-tight uppercase tracking-wide">
+            Account Verification Required: Please verify your email to enable clinical data storage.
+          </p>
+        </div>
+      )}
+      
       {/* 1. Navigation - Left Rail on Desktop, Bottom Rail on Mobile */}
       <nav className="w-full lg:w-20 bg-indigo-900 flex flex-row lg:flex-col items-center justify-between lg:justify-start px-6 lg:px-0 py-4 lg:py-8 space-x-6 lg:space-x-0 lg:space-y-8 flex-shrink-0 z-50 order-2 lg:order-none">
         <div className="hidden lg:flex w-12 h-12 bg-white rounded-xl items-center justify-center shadow-md">
@@ -828,14 +841,23 @@ export default function App() {
                       <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl -z-0" />
                       
                       <div className="relative z-10">
-                        <div className="flex items-center gap-3 lg:gap-4 mb-8 lg:mb-10 lg:pb-6 lg:border-b lg:border-slate-100">
-                          <div className="p-3 bg-indigo-900 rounded-xl lg:rounded-2xl text-white">
-                            <FileText className="w-5 h-5 lg:w-6 lg:h-6" />
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 lg:mb-10 lg:pb-6 lg:border-b lg:border-slate-100">
+                          <div className="flex items-center gap-3 lg:gap-4">
+                            <div className="p-3 bg-indigo-900 rounded-xl lg:rounded-2xl text-white">
+                              <FileText className="w-5 h-5 lg:w-6 lg:h-6" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl lg:text-3xl font-bold text-slate-900">Summary Hub</h3>
+                              <p className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Foundational Evidence Synthesis</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-xl lg:text-3xl font-bold text-slate-900">Summary Hub</h3>
-                            <p className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Foundational Evidence Synthesis</p>
-                          </div>
+                          <Button 
+                            onClick={() => exportSummaryToPDF(summaryResult, topic)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs px-6"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download PDF
+                          </Button>
                         </div>
                         
                         <div className="prose prose-sm lg:prose-indigo max-w-none prose-headings:font-bold prose-p:font-medium prose-p:text-slate-600 prose-li:font-medium prose-p:leading-relaxed">
@@ -874,6 +896,14 @@ export default function App() {
                             <p className="text-[9px] lg:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">MCQs from {selectedSourceIds.length} Sources</p>
                           </div>
                         </div>
+                        <Button 
+                          onClick={() => exportQuizToPDF(quizResult, topic)}
+                          variant="outline"
+                          className="w-full sm:w-auto rounded-xl font-bold text-xs px-6 border-slate-200 text-slate-600 hover:bg-slate-50"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Export Result
+                        </Button>
                       </div>
                       
                       <div className="grid grid-cols-1 gap-4 lg:gap-6">

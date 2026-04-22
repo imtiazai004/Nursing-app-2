@@ -8,6 +8,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Connectivity Diagnostic Block
+    match /test/connection {
+      allow read: if true;
+    }
+
     // Auth helpers
     function isSignedIn() {
       return request.auth != null && request.auth.token.email_verified == true;
