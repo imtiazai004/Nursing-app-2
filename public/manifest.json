@@ -1,0 +1,17 @@
+{
+  "name": "Nursify Research Hub",
+  "short_name": "Nursify",
+  "description": "Intelligent Study Companion for Nursing Students",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#4338ca",
+  "theme_color": "#4338ca",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3079/3079214.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

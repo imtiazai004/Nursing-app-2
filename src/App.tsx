@@ -571,6 +571,13 @@ export default function App() {
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
+            {isMobile && (
+              <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl mb-4">
+                <p className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest mb-1">Mobile Tip</p>
+                <p className="text-[10px] text-indigo-600 leading-relaxed font-medium">To use Nursify like a real app: tap <span className="font-bold">Share</span> then <span className="font-bold">"Add to Home Screen"</span>.</p>
+              </div>
+            )}
+            
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Library ({sources.length})</p>
               {selectedSourceIds.length > 0 && <span className="text-[10px] font-bold text-indigo-600">{selectedSourceIds.length} ACTIVE</span>}
