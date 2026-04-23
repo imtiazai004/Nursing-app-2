@@ -128,6 +128,45 @@ export default function App() {
   const [summaryResult, setSummaryResult] = useState<SummaryResult | null>(null);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+      // Update UI notify the user they can install the PWA
+      setShowInstallPrompt(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    window.addEventListener('appinstalled', () => {
+      setDeferredPrompt(null);
+      setShowInstallPrompt(false);
+      toast.success('Nursify installed successfully! Check your home screen.');
+    });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    // Show the install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      toast.success('Great choice! Opening the app profile...');
+    }
+    // We've used the prompt, and can't use it again, throw it away
+    setDeferredPrompt(null);
+    setShowInstallPrompt(false);
+  };
 
   // Source upload states
   const [uploadText, setUploadText] = useState('');
@@ -513,6 +552,48 @@ export default function App() {
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-slate-50 font-sans text-slate-800">
       <Toaster position="top-center" richColors />
       
+      <AnimatePresence>
+        {showInstallPrompt && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="fixed bottom-24 lg:bottom-10 left-1/2 -translate-x-1/2 z-[200] w-[92%] max-w-md"
+          >
+            <Card className="border-none shadow-2xl bg-indigo-900 text-white overflow-hidden rounded-[32px]">
+              <CardContent className="p-6 lg:p-8">
+                <div className="flex gap-5">
+                  <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner">
+                    <Download className="w-7 h-7 text-indigo-300" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-lg font-bold text-white tracking-tight">Personal Study Vault</h4>
+                    <p className="text-xs text-indigo-200 leading-relaxed font-medium">
+                      Install Nursify to your home screen for smoother research and offline access.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-8">
+                  <Button 
+                    onClick={() => setShowInstallPrompt(false)}
+                    variant="ghost" 
+                    className="text-white/60 hover:text-white hover:bg-white/5 rounded-2xl font-bold uppercase tracking-widest text-[10px]"
+                  >
+                    Maybe Later
+                  </Button>
+                  <Button 
+                    onClick={handleInstallClick}
+                    className="bg-white text-indigo-900 hover:bg-indigo-50 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg"
+                  >
+                    Install Now
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {user && !user.emailVerified && (
         <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md bg-amber-50 border border-amber-200 p-3 rounded-xl shadow-lg flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
