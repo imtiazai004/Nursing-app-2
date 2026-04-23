@@ -225,6 +225,8 @@ export default function App() {
       
       if (errorStr.includes('API_KEY_INVALID') || errorStr.includes('KEY_NOT_FOUND') || errorStr.includes('NOT DEFINED')) {
         errorMessage = 'Sensitive Data Access Denied: GEMINI_API_KEY is invalid or missing in Vercel. Please double-check your Environment Variables.';
+      } else if (error?.status === 429 || errorStr.includes('QUOTA') || errorStr.includes('429') || errorStr.includes('LIMIT')) {
+        errorMessage = 'Nursify Free-Limit Reached: To keep this service 100% free for students, Google limits daily usage. Your global cache is active, so results for this topic may appear soon! Please try again in 1 hour.';
       } else if (error?.status === 403 || errorStr.includes('403') || errorStr.includes('PERMISSION_DENIED')) {
         errorMessage = 'Clinical Research Access Denied: Check your Gemini API quota or ensure the key has access to the flash model.';
       } else if (errorStr.includes('SAFETY') || errorStr.includes('HARM_CATEGORY')) {
