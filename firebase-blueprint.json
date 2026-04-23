@@ -62,9 +62,24 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "sourceIds", "content", "createdAt"]
+    },
+    "AnalysisCache": {
+      "title": "Analysis Cache",
+      "description": "Global cache for study session results",
+      "type": "object",
+      "properties": {
+        "topic": { "type": "string" },
+        "result": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["topic", "result", "createdAt"]
     }
   },
   "firestore": {
+    "analysis_cache/{cacheId}": {
+      "schema": "AnalysisCache",
+      "description": "Global research cache using hashes"
+    },
     "sources/{sourceId}": {
       "schema": "Source",
       "description": "Uploaded study materials"

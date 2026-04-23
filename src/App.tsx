@@ -43,7 +43,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Progress } from '@/components/ui/progress';
 
 // Services
-import { generateQuiz, generateSummary, MCQQuestion, SummaryResult } from './services/gemini';
+import { performOmniAnalysis, MCQQuestion, SummaryResult } from './services/gemini';
+import { getCachedAnalysis, saveToCache } from './services/cacheService';
 import Markdown from 'react-markdown';
 
 import mammoth from 'mammoth';
@@ -167,16 +168,53 @@ export default function App() {
     const toastId = 'analysis';
     
     try {
+      // 1. Check Global Research Cache First (Saves Quota)
+      toast.loading('Checking Clinical Research Vault...', { id: toastId });
+      const cached = await getCachedAnalysis(analysisTopic, contentSources);
+      
+      if (cached) {
+        setQuizResult(cached.quiz);
+        setSummaryResult(cached.summary);
+        toast.success('Omni-Analysis Loaded from Cache', { id: toastId });
+        setIsGenerating(false);
+        return;
+      }
+
+      // 2. Perform AI Analysis with Retry Logic
       toast.loading('AI is analyzing clinical data...', { id: toastId });
       
-      const [quiz, summary] = await Promise.all([
-        generateQuiz(contentSources, analysisTopic),
-        generateSummary(contentSources, analysisTopic)
-      ]);
-      
-      setQuizResult(quiz);
-      setSummaryResult(summary);
-      toast.success('Omni-Analysis Complete', { id: toastId });
+      let attempts = 0;
+      const maxAttempts = 3;
+      let result = null;
+
+      while (attempts < maxAttempts) {
+        try {
+          result = await performOmniAnalysis(contentSources, analysisTopic);
+          break; // Success
+        } catch (error: any) {
+          attempts++;
+          const errorStr = (error?.message || '').toLowerCase();
+          const isQuota = errorStr.includes('quota') || errorStr.includes('429') || errorStr.includes('limit');
+          
+          if (isQuota && attempts < maxAttempts) {
+            const waitSec = attempts * 10;
+            toast.loading(`Quota reached. Retrying knowledge extraction in ${waitSec}s...`, { id: toastId });
+            await new Promise(r => setTimeout(r, waitSec * 1000));
+            continue;
+          }
+          throw error; // Re-throw if not quota or no more attempts
+        }
+      }
+
+      if (result) {
+        setQuizResult(result.quiz);
+        setSummaryResult(result.summary);
+        
+        // 3. Save to Global Cache for others
+        await saveToCache(analysisTopic, contentSources, result);
+        
+        toast.success('Omni-Analysis Complete', { id: toastId });
+      }
     } catch (error: any) {
       console.error("AI Analysis Error:", error);
       
