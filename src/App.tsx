@@ -130,6 +130,18 @@ export default function App() {
   const [topic, setTopic] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    // Detect iOS
+    const checkIOS = () => {
+      const ua = window.navigator.userAgent;
+      const iOS = !!ua.match(/iPad|iPhone|iPod/) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      setIsIOS(iOS);
+    };
+    checkIOS();
+  }, []);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -535,6 +547,20 @@ export default function App() {
               >
                 {isLoggingIn ? 'Connecting to Vault...' : 'Enter Research Console'}
               </Button>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  if (deferredPrompt) {
+                    handleInstallClick();
+                  } else {
+                    setShowInstallGuide(true);
+                  }
+                }}
+                className="w-full py-6 text-sm rounded-2xl border-slate-200 text-slate-600 font-bold flex items-center justify-center gap-3 hover:bg-slate-50 transition-all active:scale-95"
+              >
+                <Download className="w-5 h-5" />
+                Add Nursify to Home Screen
+              </Button>
               <p className="text-[10px] text-center text-slate-400">
                 Uses Secure Google Research Authentication
               </p>
@@ -553,6 +579,71 @@ export default function App() {
       <Toaster position="top-center" richColors />
       
       <AnimatePresence>
+        {showInstallGuide && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+            onClick={() => setShowInstallGuide(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-[32px] w-full max-w-sm p-8 shadow-2xl overflow-hidden relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -translate-y-1/2 translate-x-1/2 -z-0" />
+              
+              <div className="relative z-10 text-center space-y-6">
+                <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-indigo-100">
+                  <Download className="w-8 h-8 text-white" />
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-slate-900 leading-tight">Install Nursify</h3>
+                  <p className="text-sm text-slate-500 font-medium">Add to your home screen for the full study experience.</p>
+                </div>
+
+                <div className="space-y-4 pt-4">
+                  {isIOS ? (
+                    <div className="space-y-4 text-left p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">1</div>
+                        <p className="text-xs font-semibold text-slate-700">Tap the <span className="font-bold underline text-indigo-600">Share</span> icon in Safari (the square with ↑ arrow).</p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">2</div>
+                        <p className="text-xs font-semibold text-slate-700">Scroll down and tap <span className="font-bold underline text-indigo-600">"Add to Home Screen"</span>.</p>
+                      </div>
+                      <p className="text-[9px] text-slate-400 text-center pt-2 italic">Note: If you are in a preview, open the app in a new browser tab first.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 text-left p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">1</div>
+                        <p className="text-xs font-semibold text-slate-700">Open your browser menu (usually <span className="font-bold text-indigo-600">⋮</span> or <span className="font-bold text-indigo-600">⋯</span>).</p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">2</div>
+                        <p className="text-xs font-semibold text-slate-700">Select <span className="font-bold underline text-indigo-600">"Install App"</span> or "Add to Home Screen".</p>
+                      </div>
+                      <p className="text-[9px] text-slate-400 text-center pt-2 italic">Note: If you are in a preview, open the app in a new browser tab first for the "Install" option to appear.</p>
+                    </div>
+                  )}
+
+                  <Button 
+                    onClick={() => setShowInstallGuide(false)}
+                    className="w-full bg-slate-900 hover:bg-black text-white py-6 rounded-2xl font-bold uppercase tracking-widest text-[10px]"
+                  >
+                    Got It
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
         {showInstallPrompt && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -635,6 +726,21 @@ export default function App() {
           >
             <BrainCircuit className="w-5 h-5 text-indigo-100" />
             <span className="lg:hidden text-[10px] text-white ml-2">MCQs</span>
+          </div>
+
+          <div 
+            className="p-2 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center cursor-pointer bg-amber-500 hover:bg-amber-400 transition-colors shadow-lg shadow-amber-900/20"
+            onClick={() => {
+              if (deferredPrompt) {
+                handleInstallClick();
+              } else {
+                setShowInstallGuide(true);
+              }
+            }}
+            title="Download App"
+          >
+            <Download className="w-5 h-5 text-white" />
+            <span className="lg:hidden text-[10px] text-white ml-2">Add to Screen</span>
           </div>
 
           {(summaryResult || quizResult) && (
@@ -725,18 +831,32 @@ export default function App() {
 
           <div className="flex-1 flex flex-col overflow-hidden">
             {isMobile && (
-              <div className="p-4 bg-indigo-600 shadow-lg shadow-indigo-100 rounded-2xl mb-6 text-white border-none">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Download className="w-4 h-4" />
+              <div className="p-5 bg-indigo-600 shadow-xl shadow-indigo-100 rounded-[24px] mb-6 text-white border-none relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="relative z-10 flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white text-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                      <Download className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Nursify Platform</p>
+                      <h4 className="text-sm font-bold">Install to Home Screen</h4>
+                    </div>
                   </div>
-                  <p className="text-xs font-bold uppercase tracking-widest">Install Nursify App</p>
+                  
+                  <Button 
+                    onClick={() => {
+                      if (deferredPrompt) {
+                        handleInstallClick();
+                      } else {
+                        setShowInstallGuide(true);
+                      }
+                    }}
+                    className="w-full bg-white text-indigo-900 hover:bg-indigo-50 font-bold py-5 rounded-xl shadow-md active:scale-95 transition-all text-xs"
+                  >
+                    Quick Add to Device
+                  </Button>
                 </div>
-                <p className="text-[10px] leading-relaxed font-medium opacity-90">
-                  For the best experience: 
-                  <br />- <span className="font-bold underline">iOS:</span> Tap <span className="border border-white/40 px-1 rounded mx-0.5">Share</span> then <span className="font-bold whitespace-nowrap">"Add to Home Screen"</span>
-                  <br />- <span className="font-bold underline">Android/Laptop:</span> Click the <span className="font-bold">three-dots</span> then <span className="font-bold">"Install App"</span>
-                </p>
               </div>
             )}
             
