@@ -555,6 +555,25 @@ export default function App() {
             <BrainCircuit className="w-5 h-5 text-indigo-100" />
             <span className="lg:hidden text-[10px] text-white ml-2">MCQs</span>
           </div>
+
+          {(summaryResult || quizResult) && (
+            <div 
+              className="p-2 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center cursor-pointer bg-emerald-600 hover:bg-emerald-500 transition-colors animate-in fade-in zoom-in"
+              onClick={() => {
+                if (activeTab === 'summary_result' && summaryResult) {
+                  exportSummaryToPDF(summaryResult, topic);
+                } else if (activeTab === 'quiz_result' && quizResult) {
+                  exportQuizToPDF(quizResult, topic);
+                } else {
+                  toast.info("Switch to Summary or MCQ tab to download specific results.");
+                }
+              }}
+              title="Quick Export"
+            >
+              <Download className="w-5 h-5 text-white" />
+              <span className="lg:hidden text-[10px] text-white ml-2">Export</span>
+            </div>
+          )}
         </div>
 
         <div className="lg:mt-auto">
@@ -625,9 +644,18 @@ export default function App() {
 
           <div className="flex-1 flex flex-col overflow-hidden">
             {isMobile && (
-              <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl mb-4">
-                <p className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest mb-1">Mobile Tip</p>
-                <p className="text-[10px] text-indigo-600 leading-relaxed font-medium">To use Nursify like a real app: tap <span className="font-bold">Share</span> then <span className="font-bold">"Add to Home Screen"</span>.</p>
+              <div className="p-4 bg-indigo-600 shadow-lg shadow-indigo-100 rounded-2xl mb-6 text-white border-none">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Download className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs font-bold uppercase tracking-widest">Install Nursify App</p>
+                </div>
+                <p className="text-[10px] leading-relaxed font-medium opacity-90">
+                  For the best experience: 
+                  <br />- <span className="font-bold underline">iOS:</span> Tap <span className="border border-white/40 px-1 rounded mx-0.5">Share</span> then <span className="font-bold whitespace-nowrap">"Add to Home Screen"</span>
+                  <br />- <span className="font-bold underline">Android/Laptop:</span> Click the <span className="font-bold">three-dots</span> then <span className="font-bold">"Install App"</span>
+                </p>
               </div>
             )}
             
@@ -877,30 +905,31 @@ export default function App() {
                       <Button onClick={() => setActiveTab('sources')} variant="outline" className="rounded-xl px-6 lg:px-8 border-slate-200">Return to Workbench</Button>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-2xl lg:rounded-[32px] border border-slate-200 p-6 lg:p-10 shadow-sm relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl -z-0" />
-                      
-                      <div className="relative z-10">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 lg:mb-10 lg:pb-6 lg:border-b lg:border-slate-100">
-                          <div className="flex items-center gap-3 lg:gap-4">
-                            <div className="p-3 bg-indigo-900 rounded-xl lg:rounded-2xl text-white">
-                              <FileText className="w-5 h-5 lg:w-6 lg:h-6" />
-                            </div>
-                            <div>
-                              <h3 className="text-xl lg:text-3xl font-bold text-slate-900">Summary Hub</h3>
-                              <p className="hidden sm:block text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Foundational Evidence Synthesis</p>
-                            </div>
+                    <div className="bg-white rounded-2xl lg:rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden flex flex-col">
+                      {/* Sticky Header with Download */}
+                      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 p-6 lg:px-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 lg:gap-4">
+                          <div className="p-3 bg-indigo-900 rounded-xl text-white">
+                            <FileText className="w-5 h-5" />
                           </div>
-                          <Button 
-                            onClick={() => exportSummaryToPDF(summaryResult, topic)}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs px-6"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Download PDF
-                          </Button>
+                          <div>
+                            <h3 className="text-xl lg:text-2xl font-bold text-slate-900">Summary Hub</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Foundational Synthesis</p>
+                          </div>
                         </div>
+                        <Button 
+                          onClick={() => exportSummaryToPDF(summaryResult, topic)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs px-6 py-5 h-auto shadow-lg shadow-indigo-100"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download PDF Summary
+                        </Button>
+                      </div>
+                      
+                      <div className="p-6 lg:p-10 relative">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl -z-0" />
                         
-                        <div className="prose prose-sm lg:prose-indigo max-w-none prose-headings:font-bold prose-p:font-medium prose-p:text-slate-600 prose-li:font-medium prose-p:leading-relaxed">
+                        <div className="relative z-10 prose prose-sm lg:prose-indigo max-w-none prose-headings:font-bold prose-p:font-medium prose-p:text-slate-600 prose-li:font-medium prose-p:leading-relaxed">
                           <Markdown>{summaryResult.content}</Markdown>
                         </div>
                       </div>
@@ -925,8 +954,9 @@ export default function App() {
                       <Button onClick={() => setActiveTab('sources')} variant="outline" className="rounded-xl px-6 lg:px-8 border-slate-200">Go to Vault</Button>
                     </div>
                   ) : (
-                    <>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 border-b border-slate-200">
+                    <div className="space-y-6 lg:space-y-8">
+                      {/* Sticky Header for Quiz Export */}
+                      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md py-4 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3 lg:gap-4">
                           <div className="p-3 bg-indigo-600 rounded-xl lg:rounded-2xl text-white shadow-lg shadow-indigo-100">
                             <BrainCircuit className="w-5 h-5 lg:w-6 lg:h-6" />
@@ -938,11 +968,10 @@ export default function App() {
                         </div>
                         <Button 
                           onClick={() => exportQuizToPDF(quizResult, topic)}
-                          variant="outline"
-                          className="w-full sm:w-auto rounded-xl font-bold text-xs px-6 border-slate-200 text-slate-600 hover:bg-slate-50"
+                          className="w-full sm:w-auto bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs px-6 py-5 h-auto shadow-lg shadow-slate-200 transition-all"
                         >
                           <Download className="w-4 h-4 mr-2" />
-                          Export Result
+                          Export Quiz Results
                         </Button>
                       </div>
                       
@@ -980,7 +1009,7 @@ export default function App() {
                           </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
                 </motion.div>
               )}
